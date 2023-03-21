@@ -1,0 +1,17 @@
+<package format="2">
+    <name>bag_parser</name>
+    <version>1.0.0</version>
+    <description>
+    This package provides foo capability.
+    </description>
+    <maintainer email="ildaralaric1998@gmail.com">Ildar Babataev</maintainer>
+    <license>BSD</license>
+
+    <buildtool_depend>catkin</buildtool_depend>
+
+    <build_depend>roscpp</build_depend>
+    
+    <exec_depend>roscpp</exec_depend>
+    <exec_depend>nodelet</exec_depend>
+
+</package>
