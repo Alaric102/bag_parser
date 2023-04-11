@@ -2,8 +2,12 @@ cmake_minimum_required(VERSION 3.1.0)
 project(bag_parser)
 
 find_package(catkin REQUIRED
-    COMPONENTS roscpp
+    COMPONENTS 
+        roscpp
+        image_transport
 )
+
+find_library(OpenCV REQUIRED)
 
 catkin_package(
    INCLUDE_DIRS include
@@ -14,6 +18,8 @@ catkin_package(
 
 add_executable(image_parser_node src/image_parser_node.cpp)
 
+target_compile_features(image_parser_node PRIVATE cxx_std_17)
+
 target_include_directories( image_parser_node
     PRIVATE
         ${catkin_INCLUDE_DIRS}
@@ -22,4 +28,5 @@ target_include_directories( image_parser_node
 target_link_libraries(image_parser_node
     PRIVATE
         ${catkin_LIBRARIES}
+        ${OpenCV_LIBS}
 )

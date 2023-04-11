@@ -1,0 +1,9 @@
+<launch>
+    <param name="image_topic" value="/vision/front/center/image" type="str"/>
+    <param name="cinfo_topic" value="/vision/front/center/camera_info" type="str"/>
+
+    <node pkg="bag_parser" name="image_parser_node" type="image_parser_node" output="screen">
+        <param name="image_topic" value="$(arg image_topic)" />
+        <param name="cinfo_topic" value="$(arg cinfo_topic)" />
+    </node>
+</launch>
