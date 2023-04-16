@@ -7,21 +7,31 @@
 
 #include <string>
 #include <string_view>
+#include <iostream>
+#include <fstream>
 #include <experimental/filesystem>
 
 #include <opencv2/core/mat.hpp>
+#include <opencv2/core/hal/interface.h>
 #include <opencv2/imgcodecs/imgcodecs.hpp>
+
+#include <yaml-cpp/yaml.h>
+#include <yaml-cpp/emitter.h>
 
 namespace image_logger{
 
-void make_cinfo_parameters(const std::string& topic, ros::NodeHandle& nh, const ros::Duration& timeout = ros::Duration(0))
+CameraParameters make_cinfo_parameters(const std::string& topic, ros::NodeHandle& nh, const ros::Duration& timeout = ros::Duration(0))
 {
     auto msg = ros::topic::waitForMessage<sensor_msgs::CameraInfo>(topic, nh, timeout);
     if (msg == nullptr){
         ROS_ERROR_STREAM("Message timeout: " + topic);
         throw std::invalid_argument("Message timeout: " + topic);
     }
-    ROS_INFO_STREAM(msg->height << " x " << msg->width);
+    CameraParameters params;
+    params.camera_mat = cv::Mat(3, 3, CV_64F, (void*)msg->K.data(), 3*sizeof(double));
+    params.proj_mat = cv::Mat(1, 4, CV_64F, (void*)msg->P.data(), 4*sizeof(double));
+    params.dist_mat = cv::Mat(1, msg->D.size(), CV_64F, (void*)msg->D.data(), msg->D.size()*sizeof(double));
+    return params;
 }
 
 fs::path make_save_path(const std::string& folder)
@@ -41,10 +51,47 @@ fs::path make_save_path(const std::string& folder)
     const fs::path root_path(folder);
     help_create(root_path);
 
-    const auto new_folder_name = "IMAGES_" + std::to_string(std::distance(root_path.begin(), root_path.end()) + 1);
+    size_t folder_num = 0;
+    for (const auto & entry : fs::directory_iterator(root_path)){
+        ++folder_num;
+    }
+    const auto new_folder_name = "IMAGES_" + std::to_string(folder_num);
     const auto new_save_path = root_path / new_folder_name;
     help_create(new_save_path);
     return new_save_path;
+}
+
+inline YAML::Emitter& operator<<(YAML::Emitter& emitter, const cv::Mat& mat) {
+    emitter << YAML::Flow;
+    emitter << YAML::BeginSeq;
+    for (auto it = mat.begin<double>(); it != mat.end<double>(); ++it ) {
+        emitter << *it;
+    }
+    return emitter << YAML::EndSeq;;
+}
+
+bool save_camera_parameters(const CameraParameters& params, const std::string& file_name)
+{
+    YAML::Emitter out;
+    out << YAML::BeginMap;
+    out << YAML::Key << "camera_matrix";
+    out << params.camera_mat;
+
+    out << YAML::Key << "projection_matrix";
+    out << params.proj_mat;
+
+    out << YAML::Key << "distortion_matrix";
+    out << params.dist_mat;
+
+    try {
+        std::ofstream fout(file_name);
+        fout << out.c_str();
+        fout.close();
+    } catch (const std::exception& e) {
+        ROS_ERROR_STREAM("Failed to write emitter: " << e.what());
+        return false;
+    }
+    return true;
 }
 
 ImageLogger::ImageLogger():
@@ -57,7 +104,11 @@ private_nh_(ros::NodeHandle("~"))
 
     private_nh_.param<std::string>(std::string(CINFO_TOPIC_PARAM), cinfo_topic_name_, "");
     ROS_INFO_STREAM("Camera info topic" << cinfo_topic_name_);
-    make_cinfo_parameters(cinfo_topic_name_, private_nh_);
+    const auto params = make_cinfo_parameters(cinfo_topic_name_, private_nh_);
+    const auto params_path = output_path_ / "params.yaml";
+    if (!save_camera_parameters(params, params_path.string())){
+        ROS_WARN_STREAM("Can't save camera parameters.");
+    };
 
     private_nh_.param<std::string>(std::string(IMAGE_TOPIC_PARAM), image_topic_name_, "");
     ROS_INFO_STREAM("Image topic: " << image_topic_name_);

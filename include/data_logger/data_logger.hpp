@@ -5,6 +5,9 @@
 #include <string>
 #include <string_view>
 #include <experimental/filesystem>
+
+#include <opencv2/core/mat.hpp>
+
 namespace image_logger{
 
 constexpr std::string_view IMAGE_TOPIC_PARAM = "image_topic";
@@ -13,6 +16,10 @@ constexpr std::string_view OUTPUT_PATH_PARAM = "output_path";
 constexpr size_t MESSAGE_QUEUE = 10; 
 
 namespace fs = std::experimental::filesystem;
+
+struct CameraParameters{
+    cv::Mat camera_mat, dist_mat, proj_mat;
+};
 
 class ImageLogger {
 public:

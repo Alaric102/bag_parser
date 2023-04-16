@@ -8,6 +8,7 @@ find_package(catkin REQUIRED
 )
 
 find_library(OpenCV REQUIRED)
+find_library(yaml-cpp REQUIRED)
 
 catkin_package(
    INCLUDE_DIRS include
@@ -30,5 +31,6 @@ target_link_libraries(image_parser_node
     PRIVATE
         ${catkin_LIBRARIES}
         ${OpenCV_LIBS}
+        yaml-cpp
         stdc++fs
 )
