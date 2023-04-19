@@ -8,7 +8,7 @@
 
 #include <opencv2/core/mat.hpp>
 
-namespace image_logger{
+namespace data_logger{
 
 constexpr std::string_view IMAGE_TOPIC_PARAM = "image_topic";
 constexpr std::string_view CINFO_TOPIC_PARAM = "cinfo_topic";
@@ -21,22 +21,35 @@ struct CameraParameters{
     cv::Mat camera_mat, dist_mat, proj_mat;
 };
 
-class ImageLogger {
+class BaseLogger{
 public:
-    ImageLogger();
-
+    BaseLogger();
+    
     void run() const;
 
+    fs::path get_output_path() const;
+    
+protected:
+    ros::NodeHandle private_nh_;
+    ros::Subscriber subcriber_;
+    size_t data_counter = 0;
+private:
+    fs::path output_path_;
+};
+
+class CloudLogger final : BaseLogger {
+public:
+    CloudLogger();
+};
+
+class ImageLogger final : public BaseLogger {
+public:
+    ImageLogger();
 private:
     void image_cb_(const sensor_msgs::ImageConstPtr& msg);
 
 private:
-    ros::NodeHandle private_nh_;
-    ros::Subscriber image_sub_;
-    std::string image_topic_name_, cinfo_topic_name_;
-    fs::path output_path_;
-
-    size_t image_counter_ = 0;
+    std::string image_topic_name_;
 };
 
-};
+}
