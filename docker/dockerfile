@@ -7,3 +7,9 @@ RUN curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | apt
 ARG DEBIAN_FRONTEND=noninteractive
 RUN apt update && apt install -y ros-melodic-desktop
 RUN echo "source /opt/ros/melodic/setup.bash" >> ~/.bashrc
+
+# Install OpenCV
+WORKDIR /home/Downloads
+RUN sudo apt update && sudo apt install -y cmake g++ wget unzip
+RUN wget -O opencv.zip https://github.com/opencv/opencv/archive/4.x.zip && unzip opencv.zip
+RUN mkdir -p build && cd build && cmake  ../opencv-4.x && cmake --build . && sudo make install
