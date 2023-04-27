@@ -1,43 +1,48 @@
+# Bag parser
+
+Use this package to convert ros-melodic bag files (.bag) into a files (images as .png files, point clouds as .pcl files)
+
 # Requirements
 
-Package requires ros-melodic, opencv, pcl, eigen and their dependencies. There is a dockerfile for building a docker image for package usage.
+Package requires:
+- ros-melodic
+- openCV
+- eigen
+- pcl
+There is a dockerfile for building a docker image for package usage.
 
-## ROS-melodic.
-
-ROS-melodic required.
-
-## OpenCV
-
-OpenCV required.
-
-# Docker support
+# Docker
 
 Package uses nvidia/cuda image.
-- Install docekr engine.
-- Install CUDA (version 12.01).
-- Check this out: https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html. 
+- Install docker engine.
+- Install CUDA (version 12.01 tested).
+
+Check this out: https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html. 
 Install the nvidia-container-toolkit package (and dependencies) after updating the package listing.
 
-Build image:
+### Build image
+You can build a docker image by command below:
+```
+docker build -t <your_image_name> -f docker/dockerfile .
+```
 
-`docker build -t ros1_ws <path_to_repo_folder>/docker/dockerfile`
+### Run image:
+You can start builded docker image by command below:
+```
+sudo chmod +x <path_to_repo_folder>/docker/run_image.sh
+sh <path_to_repo_folder>/docker/run_image.sh
+```
+# Nodes
 
-Run image:
+## image_parser_node
 
-`sudo chmod +x <path_to_repo_folder>/docker/run_image.sh`
+Saves images (.png format) and camera information (.yaml format) into a filesystem.
+- `image_topic` - It's a `sensor_msgs/Image` topic to subscribe.
+- `cinfo_topic` - It's a `sensor_msgs/CamraInfo` topic to subscribe.
+- `output_path` - Directory to use for output files.
 
-`sh <path_to_repo_folder>/docker/run_image.sh`
+### Usage
 
-# Package
+Run node:
 
-## Nodes
-
-### image_parser_node
-
-#### Usage
-
-#### Subscribes
-
-#### Publishes
-
-#### Outputs
+`rosrun bag_parser image_parser_node image_topic:=<topic> cinfo_topic:=<topic> output_path:=<path>`
