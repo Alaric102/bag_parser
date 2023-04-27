@@ -21,16 +21,20 @@ struct CameraParameters{
 class BaseLogger{
 public:
 BaseLogger();
-private:
+protected:
+fs::path output_path_;
+size_t data_counter = 0;
 };
 
-class ImageLogger final : BaseLogger {
+class ImageLogger final : public BaseLogger {
 public:
 ImageLogger();
+bool save_image(const cv::Mat& image);
+bool save_cinfo(const CameraParameters& params);
 private:
 };
 
-class CloudLogger final : BaseLogger {
+class CloudLogger final : public BaseLogger {
 public:
 CloudLogger();
 private:

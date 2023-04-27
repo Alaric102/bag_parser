@@ -1,5 +1,11 @@
 #include "data_logger/data_logger.hpp"
 
+#include <string>
+#include <string_view>
+
+#include <opencv2/core/mat.hpp>
+#include <opencv2/imgcodecs/imgcodecs.hpp>
+
 namespace data_logger {
 
 static inline YAML::Emitter& operator<<(YAML::Emitter& emitter, const cv::Mat& mat) {
@@ -65,6 +71,18 @@ BaseLogger::BaseLogger()
 ImageLogger::ImageLogger() : BaseLogger()
 {
     
+}
+
+bool ImageLogger::save_image(const cv::Mat& image)
+{
+    const auto file_path = output_path_ / (std::to_string(data_counter++) + ".png");
+    return cv::imwrite(file_path.string(), image);
+}
+
+bool ImageLogger::save_cinfo(const CameraParameters& params)
+{
+    const auto params_path = output_path_ / "params.yaml";
+    return save_camera_parameters(params, params_path.string());
 }
 
 CloudLogger::CloudLogger() : BaseLogger()
