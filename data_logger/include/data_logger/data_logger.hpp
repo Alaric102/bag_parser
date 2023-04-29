@@ -10,6 +10,9 @@
 #include <opencv2/core/mat.hpp>
 #include <opencv2/core/types.hpp>
 
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
+
 namespace data_logger{
 
 namespace fs = std::experimental::filesystem;
@@ -20,15 +23,15 @@ struct CameraParameters{
 
 class BaseLogger{
 public:
-BaseLogger();
+BaseLogger(const std::string& output_folder);
 protected:
 fs::path output_path_;
-size_t data_counter = 0;
+size_t data_counter_ = 0;
 };
 
 class ImageLogger final : public BaseLogger {
 public:
-ImageLogger();
+ImageLogger(const std::string& output_folder);
 bool save_image(const cv::Mat& image);
 bool save_cinfo(const CameraParameters& params);
 private:
@@ -36,7 +39,9 @@ private:
 
 class CloudLogger final : public BaseLogger {
 public:
-CloudLogger();
+CloudLogger(const std::string& output_folder);
+
+bool save_cloud(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud);
 private:
 };
 

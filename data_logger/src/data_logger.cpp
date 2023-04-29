@@ -2,9 +2,19 @@
 
 #include <string>
 #include <string_view>
+#include <experimental/filesystem>
+#include <fstream>
 
 #include <opencv2/core/mat.hpp>
+#include <opencv2/core/types.hpp>
 #include <opencv2/imgcodecs/imgcodecs.hpp>
+
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
+#include <pcl/io/pcd_io.h>
+
+#include <yaml-cpp/yaml.h>
+#include <yaml-cpp/emitter.h>
 
 namespace data_logger {
 
@@ -46,7 +56,7 @@ static inline fs::path make_save_path(const std::string& folder)
             return;
         }
         if (!fs::create_directories(path, err)){
-            throw std::invalid_argument("Invalid path. Line " + std::to_string(__LINE__));
+            throw std::invalid_argument("Invalid path: " + path.string() + " . Line " + std::to_string(__LINE__));
         }
     };
 
@@ -63,31 +73,33 @@ static inline fs::path make_save_path(const std::string& folder)
     return new_save_path;
 }
 
-BaseLogger::BaseLogger()
+BaseLogger::BaseLogger(const std::string& output_folder)
 {
-
+    output_path_ = make_save_path(output_folder);
 }
 
-ImageLogger::ImageLogger() : BaseLogger()
-{
-    
-}
+ImageLogger::ImageLogger(const std::string& output_folder) : BaseLogger(output_folder)
+{}
 
 bool ImageLogger::save_image(const cv::Mat& image)
 {
-    const auto file_path = output_path_ / (std::to_string(data_counter++) + ".png");
+    const auto file_path = output_path_ / (std::to_string(data_counter_++) + ".png");
     return cv::imwrite(file_path.string(), image);
 }
 
 bool ImageLogger::save_cinfo(const CameraParameters& params)
 {
-    const auto params_path = output_path_ / "params.yaml";
+    const auto params_path = output_path_ / "camera_info.yaml";
     return save_camera_parameters(params, params_path.string());
 }
 
-CloudLogger::CloudLogger() : BaseLogger()
+CloudLogger::CloudLogger(const std::string& output_folder) : BaseLogger(output_folder)
+{}
+
+bool CloudLogger::save_cloud(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud)
 {
-    
+    const auto file_path = output_path_ / (std::to_string(data_counter_++) + ".pcd");
+    return pcl::io::savePCDFileASCII(file_path.string(), *cloud) == 0;
 }
 
 }

@@ -13,15 +13,16 @@ target_include_directories(data_logger
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         ${OpenCV_INCLUDE_DIRS}
-    PRIVATE
         ${PCL_INCLUDE_DIRS}
+    PRIVATE
+        
 )
 
 target_link_libraries(data_logger
     PUBLIC
         ${OpenCV_LIBS}
-    PRIVATE
         ${PCL_LIBRARIES}
+    PRIVATE
         yaml-cpp
         stdc++fs
 )
