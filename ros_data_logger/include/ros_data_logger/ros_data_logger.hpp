@@ -8,15 +8,11 @@
 
 #include <string>
 #include <string_view>
+#include <memory>
 
 #include <opencv2/core/mat.hpp>
 
 namespace ros_data_logger{
-
-constexpr std::string_view IMAGE_TOPIC_PARAM = "image_topic";
-constexpr std::string_view CINFO_TOPIC_PARAM = "cinfo_topic";
-constexpr std::string_view OUTPUT_PATH_PARAM = "output_path";
-constexpr size_t MESSAGE_QUEUE = 10; 
 
 class BaseLoggerHandler{
 public:
@@ -26,6 +22,7 @@ public:
 protected:
     ros::NodeHandle private_nh_;
     ros::Subscriber subcriber_;
+    std::string output_path_name_;
 };
 
 class CloudLoggerHandler final : public BaseLoggerHandler {
@@ -33,6 +30,8 @@ public:
     CloudLoggerHandler();
 private:
     void cloud_cb_(const sensor_msgs::PointCloud2ConstPtr& msg);
+private:
+    std::unique_ptr<data_logger::CloudLogger> logger_;
 };
 
 class ImageLoggerHandler final : public BaseLoggerHandler {
@@ -40,9 +39,8 @@ public:
     ImageLoggerHandler();
 private:
     void image_cb_(const sensor_msgs::ImageConstPtr& msg);
-
 private:
-    std::string image_topic_name_;
+    std::unique_ptr<data_logger::ImageLogger> logger_;
 };
 
 }

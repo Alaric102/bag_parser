@@ -23,14 +23,28 @@ target_include_directories(image_parser_node
     PRIVATE
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         ${catkin_INCLUDE_DIRS}
-        # ${OpenCV_INCLUDE_DIRS}
 )
 
 target_link_libraries(image_parser_node
     PUBLIC
         ${catkin_LIBRARIES}
         data_logger
-        # ${OPENCV_LIBS}
+        yaml-cpp
+        stdc++fs
+)
+
+add_executable(cloud_parser_node ${CMAKE_CURRENT_SOURCE_DIR}/src/cloud_parser_node.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/ros_data_logger.cpp)
+
+target_include_directories(cloud_parser_node
+    PRIVATE
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        ${catkin_INCLUDE_DIRS}
+)
+
+target_link_libraries(cloud_parser_node
+    PUBLIC
+        ${catkin_LIBRARIES}
+        data_logger
         yaml-cpp
         stdc++fs
 )

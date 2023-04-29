@@ -8,6 +8,7 @@
 #include <sensor_msgs/CameraInfo.h>
 #include <cv_bridge/cv_bridge.h>
 #include <sensor_msgs/PointCloud2.h>
+#include <pcl_conversions/pcl_conversions.h>
 
 #include <opencv2/core/mat.hpp>
 #include <opencv2/core/types.hpp>
@@ -15,8 +16,15 @@
 
 namespace ros_data_logger{
 
+static constexpr std::string_view IMAGE_TOPIC_PARAM = "image_topic";
+static constexpr std::string_view CINFO_TOPIC_PARAM = "cinfo_topic";
+static constexpr std::string_view CLOUD_TOPIC_PARAM = "cloud_topic";
+static constexpr std::string_view OUTPUT_PATH_PARAM = "output_path";
+static constexpr size_t MESSAGE_QUEUE = 10; 
+
 static inline data_logger::CameraParameters make_cinfo_parameters(const std::string& topic, ros::NodeHandle& nh, const ros::Duration& timeout = ros::Duration(0))
 {
+    ROS_INFO_STREAM("Wait message from: " << topic);
     auto msg = ros::topic::waitForMessage<sensor_msgs::CameraInfo>(topic, nh, timeout);
     if (msg == nullptr){
         ROS_ERROR_STREAM("Message timeout: " + topic);
@@ -24,7 +32,7 @@ static inline data_logger::CameraParameters make_cinfo_parameters(const std::str
     }
     data_logger::CameraParameters params;
     params.camera_mat = cv::Mat(3, 3, CV_64F, (void*)msg->K.data(), 3*sizeof(double));
-    params.proj_mat = cv::Mat(1, 4, CV_64F, (void*)msg->P.data(), 4*sizeof(double));
+    params.proj_mat = cv::Mat(3, 4, CV_64F, (void*)msg->P.data(), 4*sizeof(double));
     params.dist_mat = cv::Mat(1, msg->D.size(), CV_64F, (void*)msg->D.data(), msg->D.size()*sizeof(double));
     return params;
 }
@@ -32,16 +40,8 @@ static inline data_logger::CameraParameters make_cinfo_parameters(const std::str
 BaseLoggerHandler::BaseLoggerHandler(): 
     private_nh_(ros::NodeHandle("~"))
 {
-    std::string output_path_name;
-    private_nh_.param<std::string>(std::string(OUTPUT_PATH_PARAM), output_path_name, "");
-    // output_path_ = make_save_path(output_path_name);
-    // ROS_INFO_STREAM("Save folder: " << output_path_.string());
+    private_nh_.param<std::string>(std::string(OUTPUT_PATH_PARAM), output_path_name_, "");
 }
-
-// fs::path BaseLoggerHandler::get_output_path() const
-// {
-//     return output_path_;
-// }
 
 void BaseLoggerHandler::run() const
 {
@@ -55,46 +55,56 @@ void BaseLoggerHandler::run() const
 ImageLoggerHandler::ImageLoggerHandler():
     BaseLoggerHandler()
 {
+    logger_ = std::make_unique<data_logger::ImageLogger>(data_logger::ImageLogger(output_path_name_));
+
     std::string cinfo_topic;
     private_nh_.param<std::string>(std::string(CINFO_TOPIC_PARAM), cinfo_topic, "");
-    const auto params = make_cinfo_parameters(cinfo_topic, private_nh_);
+    const auto params = make_cinfo_parameters(cinfo_topic, private_nh_);    
+    if (!logger_->save_cinfo(params)){
+        ROS_WARN_STREAM("Can't save camera parameters.");
+    }
 
-    // const auto params_path = get_output_path() / "params.yaml";
-    // if (!save_camera_parameters(params, params_path.string())){
-    //     ROS_WARN_STREAM("Can't save camera parameters.");
-    // };
-
-    private_nh_.param<std::string>(std::string(IMAGE_TOPIC_PARAM), image_topic_name_, "");
-    ROS_INFO_STREAM("Image topic: " << image_topic_name_);
-    subcriber_ = private_nh_.subscribe(image_topic_name_, MESSAGE_QUEUE, &ImageLoggerHandler::image_cb_, this);
+    std::string image_topic;
+    private_nh_.param<std::string>(std::string(IMAGE_TOPIC_PARAM), image_topic, "");
+    ROS_INFO_STREAM("Image topic: " << image_topic);
+    subcriber_ = private_nh_.subscribe(image_topic, MESSAGE_QUEUE, &ImageLoggerHandler::image_cb_, this);
 }
 
 void ImageLoggerHandler::image_cb_(const sensor_msgs::ImageConstPtr& msg)
 {
-    // cv_bridge::CvImagePtr image_ptr;
-    // try{
-    //     image_ptr = cv_bridge::toCvCopy(msg, "bgr8");
-    //     const auto file_path = get_output_path() / (std::to_string(data_counter++) + ".png");
-    //     if (cv::imwrite(file_path.string(), image_ptr->image)){
-    //         ROS_INFO_STREAM("Saved: " << file_path);
-    //     } else {
-    //         ROS_WARN_STREAM("Can't save image.");
-    //     }
-    //     image_ptr->image;
-    // } catch (const cv_bridge::Exception& e){
-    //     ROS_ERROR_STREAM("cv_bridge error: " << e.what());
-    //     return;
-    // }
+    cv_bridge::CvImageConstPtr image_ptr;
+    try{
+        image_ptr = cv_bridge::toCvShare(msg, "bgr8");
+        if (logger_->save_image(image_ptr->image)){
+            ROS_INFO_STREAM("Saved image");
+        } else {
+            ROS_WARN_STREAM("Can't save image.");
+        }
+    } catch (const cv_bridge::Exception& e){
+        ROS_ERROR_STREAM("cv_bridge error: " << e.what());
+        return;
+    }
 }
 
 CloudLoggerHandler::CloudLoggerHandler() : BaseLoggerHandler()
 {
-    
+    logger_ = std::make_unique<data_logger::CloudLogger>(data_logger::CloudLogger(output_path_name_));
+
+    std::string cloud_topic;
+    private_nh_.param<std::string>(std::string(CLOUD_TOPIC_PARAM), cloud_topic, "");
+    ROS_INFO_STREAM("Cloud topic: " << cloud_topic);
+    subcriber_ = private_nh_.subscribe(cloud_topic, MESSAGE_QUEUE, &CloudLoggerHandler::cloud_cb_, this);
 }
 
 void CloudLoggerHandler::cloud_cb_(const sensor_msgs::PointCloud2ConstPtr& msg)
 {
-
+    pcl::PointCloud<pcl::PointXYZI>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZI>);
+    pcl::fromROSMsg(*msg, *cloud);
+    if ( logger_->save_cloud(cloud) ){
+        ROS_INFO_STREAM("Saved cloud");
+    } else {
+        ROS_WARN_STREAM("Can't save cloud.");
+    }
 }
 
 }
