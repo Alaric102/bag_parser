@@ -40,3 +40,7 @@ RUN cd pcl && mkdir build && cd build && \
     sudo make install .
 
 RUN sudo apt install libyaml-cpp-dev
+
+RUN apt-get update && apt-get install -y 
+    ros-melodic-pcl-ros
+WORKDIR /
